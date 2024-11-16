@@ -21,6 +21,11 @@ void publish_data(so_ring_buffer_t *rb, const char *filename)
 	while ((sz = read(fd, buffer, PKT_SZ)) != 0) {
 		DIE(sz != PKT_SZ, "packet truncated");
 
+		struct so_packet_t *pkt = (struct so_packet_t *)buffer;
+
+		rb->seq_to_timestamp[rb->seq_counter] = pkt->hdr.timestamp;
+		rb->seq_counter++;
+
 		/* enequeue packet into ring buffer */
 		ring_buffer_enqueue(rb, buffer, sz);
 	}

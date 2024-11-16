@@ -8,10 +8,12 @@
 
 typedef struct so_consumer_ctx_t {
 	struct so_ring_buffer_t *producer_rb;
-	int out_fd;  /// output file descriptor ??? TODO
- 
+	int out_fd;
+
     /* TODO: add synchronization primitives for timestamp ordering */
-	pthread_mutex_t log_mutex; 
+	pthread_mutex_t log_mutex;
+	pthread_mutex_t seq_mutex;
+    pthread_cond_t seq_cond;
 } so_consumer_ctx_t;
 
 int create_consumers(pthread_t *tids,

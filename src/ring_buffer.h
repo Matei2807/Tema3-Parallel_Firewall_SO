@@ -17,10 +17,14 @@ typedef struct so_ring_buffer_t {
 
 	/* TODO: Add syncronization primitives */
 	// Synchronization primitives
-	int stop;                     // Flag to stop the ring buffer
-    pthread_mutex_t mutex;       // Mutex to protect access to the ring buffer
-    pthread_cond_t cond_full;    // Condition variable for full buffer
-    pthread_cond_t cond_empty;   // Condition variable for empty buffer
+	int stop;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond_full;    // Condition for full buffer
+    pthread_cond_t cond_empty;   // Condition for empty buffer
+
+	unsigned long next_seq;
+	unsigned long *seq_to_timestamp;
+	unsigned long seq_counter;
 } so_ring_buffer_t;
 
 int     ring_buffer_init(so_ring_buffer_t *rb, size_t cap);
