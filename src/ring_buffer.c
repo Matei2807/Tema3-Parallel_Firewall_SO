@@ -9,9 +9,8 @@ int ring_buffer_init(so_ring_buffer_t *ring, size_t cap)
 {
 	/* TODO: implement ring_buffer_init */
 	ring->data = malloc(cap);
-	if (ring->data == NULL) {
+	if (ring->data == NULL)
 		return -1;
-	}
 
 	ring->read_pos = 0;
 	ring->write_pos = 0;
@@ -23,7 +22,11 @@ int ring_buffer_init(so_ring_buffer_t *ring, size_t cap)
 	pthread_cond_init(&ring->cond_full, NULL);
 	pthread_cond_init(&ring->cond_empty, NULL);
 
-	return 1; // Sau 0???
+	ring->seq_to_timestamp = malloc(20100 * sizeof(unsigned long));
+	ring->next_seq = 0;
+	ring->seq_counter = 0;
+
+	return 1;
 }
 
 ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
@@ -31,10 +34,8 @@ ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
 	/* TODO: implement ring_buffer_enqueue */
 	pthread_mutex_lock(&ring->mutex);
 
-	while (ring->len + size > ring->cap) {
+	while (ring->len + size > ring->cap)
 		pthread_cond_wait(&ring->cond_full, &ring->mutex);
-<<<<<<< Updated upstream
-=======
 
 	size_t end_space = ring->cap - ring->write_pos;
 
@@ -43,19 +44,10 @@ ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
 	} else { // split data at the end and beginning of buffer
 		memcpy(ring->data + ring->write_pos, data, end_space);
 		memcpy(ring->data, (char *)data + end_space, size - end_space);
->>>>>>> Stashed changes
 	}
 
-	size_t end_space = ring->cap - ring->write_pos;
-    if (size <= end_space) {
-        memcpy(ring->data + ring->write_pos, data, size);
-    } else {
-        memcpy(ring->data + ring->write_pos, data, end_space);
-        memcpy(ring->data, (char *)data + end_space, size - end_space);
-    }
-
-    ring->write_pos = (ring->write_pos + size) % ring->cap;
-    ring->len += size;
+	ring->write_pos = (ring->write_pos + size) % ring->cap;
+	ring->len += size;
 
 	pthread_cond_signal(&ring->cond_empty);
 	pthread_mutex_unlock(&ring->mutex);
@@ -77,17 +69,7 @@ ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
 	}
 
 	size_t end_space = ring->cap - ring->read_pos;
-    if (size <= end_space) {
-        memcpy(data, ring->data + ring->read_pos, size);
-    } else {
-        memcpy(data, ring->data + ring->read_pos, end_space);
-        memcpy((char *)data + end_space, ring->data, size - end_space);
-    }
 
-<<<<<<< Updated upstream
-    ring->read_pos = (ring->read_pos + size) % ring->cap;
-    ring->len -= size;
-=======
 	if (size <= end_space) { // data fits in buffer
 		memcpy(data, ring->data + ring->read_pos, size);
 	} else { // split data at the end and beginning of buffer
@@ -97,7 +79,6 @@ ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
 
 	ring->read_pos = (ring->read_pos + size) % ring->cap;
 	ring->len -= size;
->>>>>>> Stashed changes
 
 	pthread_cond_signal(&ring->cond_full);
 	pthread_mutex_unlock(&ring->mutex);
@@ -109,6 +90,7 @@ void ring_buffer_destroy(so_ring_buffer_t *ring)
 {
 	/* TODO: Implement ring_buffer_destroy */
 	free(ring->data);
+	free(ring->seq_to_timestamp);
 	pthread_mutex_destroy(&ring->mutex);
 	pthread_cond_destroy(&ring->cond_full);
 	pthread_cond_destroy(&ring->cond_empty);
