@@ -13,15 +13,21 @@
 
 void consumer_thread(so_consumer_ctx_t *ctx)
 {
+<<<<<<< Updated upstream
 	/* TODO: implement consumer thread */
 	char buffer[PKT_SZ];
+=======
+	char buffer[PKT_SZ], out_buf[PKT_SZ];
+	struct so_packet_t *pkt;
+
+>>>>>>> Stashed changes
 	memset(buffer, 0, PKT_SZ);
 	struct so_packet_t *pkt;
 
 	while (1) {
 		size_t ret = ring_buffer_dequeue(ctx->producer_rb, buffer, PKT_SZ);
 
-		if (ret <= 0)
+		if (ret <= 0) // finished processing
 			break;
 
 		pkt = (struct so_packet_t *)buffer;
@@ -30,10 +36,33 @@ void consumer_thread(so_consumer_ctx_t *ctx)
 		unsigned long hash = packet_hash(pkt);
 		unsigned long timestamp = pkt->hdr.timestamp;
 
+<<<<<<< Updated upstream
 		pthread_mutex_lock(&ctx->log_mutex);
 		dprintf(ctx->out_fd, "%s %016lx %lu\n", RES_TO_STR(action), hash, timestamp);
 
 		pthread_mutex_unlock(&ctx->log_mutex);
+=======
+		if (seq == (size_t)-1) {
+			printf("Invalid timestamp %lu\n", timestamp);
+			continue;
+		}
+
+		// wait for correct seq
+		pthread_mutex_lock(&ctx->seq_mutex);
+		while (ctx->producer_rb->next_seq != seq)
+			pthread_cond_wait(&ctx->seq_cond, &ctx->seq_mutex);
+
+		// save the log
+		pthread_mutex_lock(&ctx->log_mutex);
+		int len = snprintf(out_buf, 256, "%s %016lx %lu\n",
+			RES_TO_STR(action), hash, timestamp);
+		write(ctx->out_fd, out_buf, len);
+		pthread_mutex_unlock(&ctx->log_mutex);
+
+		ctx->producer_rb->next_seq++;
+		pthread_cond_broadcast(&ctx->seq_cond);
+		pthread_mutex_unlock(&ctx->seq_mutex);
+>>>>>>> Stashed changes
 	}
 }
 
@@ -42,7 +71,7 @@ int create_consumers(pthread_t *tids,
 					 struct so_ring_buffer_t *rb,
 					 const char *out_filename)
 {
-	int out_fd = open(out_filename, O_RDWR | O_CREAT | O_TRUNC, 0666);
+	int out_fd = open(out_filename, O_RDWR|O_CREAT|O_TRUNC, 0666);
 
 	if (out_fd < 0) {
 		return -1;

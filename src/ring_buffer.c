@@ -33,6 +33,17 @@ ssize_t ring_buffer_enqueue(so_ring_buffer_t *ring, void *data, size_t size)
 
 	while (ring->len + size > ring->cap) {
 		pthread_cond_wait(&ring->cond_full, &ring->mutex);
+<<<<<<< Updated upstream
+=======
+
+	size_t end_space = ring->cap - ring->write_pos;
+
+	if (size <= end_space) { // data fits in buffer
+		memcpy(ring->data + ring->write_pos, data, size);
+	} else { // split data at the end and beginning of buffer
+		memcpy(ring->data + ring->write_pos, data, end_space);
+		memcpy(ring->data, (char *)data + end_space, size - end_space);
+>>>>>>> Stashed changes
 	}
 
 	size_t end_space = ring->cap - ring->write_pos;
@@ -58,7 +69,7 @@ ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
 	pthread_mutex_lock(&ring->mutex);
 
 	while (ring->len < size) {
-		if (ring->stop) {
+		if (ring->stop == 1) { // stop condition
 			pthread_mutex_unlock(&ring->mutex);
 			return 0;
 		}
@@ -73,8 +84,20 @@ ssize_t ring_buffer_dequeue(so_ring_buffer_t *ring, void *data, size_t size)
         memcpy((char *)data + end_space, ring->data, size - end_space);
     }
 
+<<<<<<< Updated upstream
     ring->read_pos = (ring->read_pos + size) % ring->cap;
     ring->len -= size;
+=======
+	if (size <= end_space) { // data fits in buffer
+		memcpy(data, ring->data + ring->read_pos, size);
+	} else { // split data at the end and beginning of buffer
+		memcpy(data, ring->data + ring->read_pos, end_space);
+		memcpy((char *)data + end_space, ring->data, size - end_space);
+	}
+
+	ring->read_pos = (ring->read_pos + size) % ring->cap;
+	ring->len -= size;
+>>>>>>> Stashed changes
 
 	pthread_cond_signal(&ring->cond_full);
 	pthread_mutex_unlock(&ring->mutex);
@@ -94,8 +117,8 @@ void ring_buffer_destroy(so_ring_buffer_t *ring)
 void ring_buffer_stop(so_ring_buffer_t *ring)
 {
 	/* TODO: Implement ring_buffer_stop */
-	pthread_mutex_lock(&ring->mutex);
 	ring->stop = 1;
+	pthread_mutex_lock(&ring->mutex);
 	pthread_cond_broadcast(&ring->cond_empty);
 	pthread_cond_broadcast(&ring->cond_full);
 	pthread_mutex_unlock(&ring->mutex);
